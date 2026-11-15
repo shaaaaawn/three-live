@@ -109,14 +109,13 @@ Click (Select)                       | Select the node under the center reticle
 Play/Pause                           | Reset the camera
 Menu                                 | Return to the scene list
 
-Selection hit-tests the center of the view with
-`XRLiveRealityKitSession.handleTap(at:in:)`, so `onSelect` behaviors run exactly
-as they do on iOS.
+Select hit-tests the center of the view and passes the hit to
+`XRLiveRealityKitSession.handleTap(on:hitPoint:)`, so `onSelect` behaviors run
+exactly as they do on iOS.
 
 The `ThreeLiveDemoTVUITests` target drives the app with the simulated Siri
-Remote (`XCUIRemote`). `XCUIRemote` cannot swipe, so `ThreeLiveDemoTVTests`
-covers touch-surface orbiting by feeding the view's pan handler a stubbed
-recognizer. The `ThreeLiveDemoTV` scheme runs both:
+Remote (`XCUIRemote`). `XCUIRemote` cannot swipe, so touch-surface orbiting needs
+a real Apple TV to check:
 
 ```bash
 xcodebuild test -project ThreeLiveDemo.xcodeproj -scheme ThreeLiveDemoTV \

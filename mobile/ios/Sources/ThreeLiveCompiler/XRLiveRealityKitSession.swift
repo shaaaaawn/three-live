@@ -299,9 +299,8 @@
         }
         #if os(visionOS)
           entity.components.set(InputTargetComponent(allowedInputTypes: .all))
-        #elseif (os(iOS) || os(tvOS)) && compiler(>=6.0)
-          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler) and in
-          // every tvOS release with RealityKit.
+        #elseif os(iOS) && compiler(>=6.0)
+          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler).
           if #available(iOS 18.0, *) {
             entity.components.set(InputTargetComponent(allowedInputTypes: .all))
           }
@@ -461,7 +460,7 @@
       return true
     }
 
-    #if os(iOS) || os(macOS) || os(tvOS)
+    #if os(iOS) || os(macOS)
       /// Hit-tests `point` in `arView` and dispatches a select on the nearest hit entity.
       @discardableResult
       public func handleTap(at point: CGPoint, in arView: ARView) -> Bool {

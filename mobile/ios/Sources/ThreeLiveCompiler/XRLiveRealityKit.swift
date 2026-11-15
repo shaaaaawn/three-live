@@ -250,7 +250,8 @@
       // Front-face culling (iOS 18 / visionOS 2 SDK) is what turns the shell into a rim; without
       // it the shell would hide the model, so older systems fall back to a hover highlight.
       #if os(tvOS)
-        // Every tvOS release with RealityKit (tvOS 26+) supports front-face culling.
+        // Every tvOS release with RealityKit (tvOS 26+) supports front-face culling, so the
+        // fallback below would be unreachable there (and warn).
         material.faceCulling = .front
       #else
         var culled = false
@@ -318,9 +319,8 @@
       if interactive {
         #if os(visionOS)
           entity.components.set(InputTargetComponent(allowedInputTypes: .all))
-        #elseif (os(iOS) || os(tvOS)) && compiler(>=6.0)
-          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler) and in
-          // every tvOS release with RealityKit.
+        #elseif os(iOS) && compiler(>=6.0)
+          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler).
           if #available(iOS 18.0, *) {
             entity.components.set(InputTargetComponent(allowedInputTypes: .all))
           }

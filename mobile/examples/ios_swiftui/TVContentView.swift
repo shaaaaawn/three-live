@@ -136,7 +136,7 @@
         let entity = try await RealityKitHelper.loadEntity(fromGLB: glb)
         guard generation == compileGeneration else { return }
         let elapsedMs = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1e6
-        scene = TVLoadedScene(glb: glb, entity: entity, mode: preset.mode) { id in
+        scene = try TVLoadedScene(glb: glb, entity: entity, mode: preset.mode) { id in
           statusMessage = "Event '\(id)'"
         }
         resetToken += 1
@@ -153,13 +153,16 @@
   @MainActor
   final class TVLoadedScene {
     let entity: Entity
-    let live: XRLiveRealityKitSession?
-    let features: XRSpatialRealityKitFeatures?
-    let bounds: (center: SIMD3<Double>, radius: Double)
+    let live: XRLiveRealityKitSession
+    let features: XRSpatialRealityKitFeatures
     let cameraOptions: XRCameraOptions
 
-    init(glb: Data, entity: Entity, mode: StudioMode, onEvent: @escaping (String) -> Void) {
+    init(glb: Data, entity: Entity, mode: StudioMode, onEvent: @escaping (String) -> Void) throws {
+      guard let live = XRLiveRealityKitSession(glbData: glb, root: entity) else {
+        throw ThreeCompilerError.compilationFailed("the compiled GLB has no readable glTF JSON")
+      }
       self.entity = entity
+      self.live = live
       for animation in entity.availableAnimations {
         _ = entity.playAnimation(animation.repeat())
       }
@@ -169,34 +172,21 @@
         autoRotate: mode == .threeLive,
         autoRotateDelay: 1.5
       )
-      if let live = XRLiveRealityKitSession(glbData: glb, root: entity) {
-        live.installStudioLights()
-        live.installInputTargets()
-        live.onInteractivityEvent = { id, _ in onEvent(id) }
-        live.start()
-        self.live = live
-        features = XRSpatialRealityKitFeatures(live: live)
-        bounds = live.session.sceneBounds
-      } else {
-        live = nil
-        features = nil
-        let box = entity.visualBounds(recursive: true, relativeTo: entity)
-        let radius = Double(0.5 * simd_length(box.max - box.min))
-        bounds =
-          box.isEmpty || !radius.isFinite
-          ? (.zero, 1.48)
-          : (SIMD3<Double>(box.center), max(radius, 0.5))
-      }
+      live.installStudioLights()
+      live.installInputTargets()
+      live.onInteractivityEvent = { id, _ in onEvent(id) }
+      live.start()
+      features = XRSpatialRealityKitFeatures(live: live)
     }
 
     func step(dt: TimeInterval) {
-      live?.step(dt: dt)
-      features?.step(dt: dt)
+      live.step(dt: dt)
+      features.step(dt: dt)
     }
 
     func stop() {
-      features?.dispose()
-      live?.stop()
+      features.dispose()
+      live.stop()
     }
   }
 
@@ -223,10 +213,12 @@
 
   /// A focusable `ARView` driven by the Siri Remote, a game controller, or a keyboard.
   ///
-  /// Focus is only accepted while exploring, so the scene list keeps focus otherwise; the
-  /// camera and selection use the same `XROrbitCameraState` and
-  /// `XRLiveRealityKitSession.handleTap(at:in:)` as the iOS demo, with a fixed center reticle
-  /// in place of a touch point.
+  /// Focus is only accepted while exploring, so the scene list keeps focus otherwise. The
+  /// camera and selection work as in the iOS demo (`XROrbitCameraState`, then a hit test and
+  /// `XRLiveRealityKitSession.handleTap(on:hitPoint:)`), with a fixed center reticle in place
+  /// of a touch point. Remote buttons are tap recognizers, so a handled Menu press never
+  /// reaches the system (which would leave the app); outside Explore the view has no focus and
+  /// Menu behaves normally.
   final class TVOrbitView: ARView {
     /// One clickpad / arrow press orbits by this many drag points (about 15°).
     private static let orbitStepPoints = 32.0
@@ -245,15 +237,13 @@
 
     private let camera = PerspectiveCamera()
     private let pivot = Entity()
-    private(set) var orbit = XROrbitCameraState()
+    private var orbit = XROrbitCameraState()
     private var loaded: TVLoadedScene?
     private var lastResetToken = -1
     private var isPanning = false
     private var lastPanTranslation: CGPoint = .zero
     private var orbitCameraTransform = matrix_identity_float4x4
     private var updateSubscription: Cancellable?
-    /// Presses this view consumed in `pressesBegan`, so their later phases are never forwarded.
-    private var consumedPresses = Set<UIPress>()
 
     required init(frame frameRect: CGRect) {
       super.init(frame: frameRect)
@@ -270,12 +260,12 @@
       let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
       pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirect.rawValue)]
       addGestureRecognizer(pan)
-      let select = UITapGestureRecognizer(target: self, action: #selector(handleSelect))
-      select.allowedPressTypes = [NSNumber(value: UIPress.PressType.select.rawValue)]
-      addGestureRecognizer(select)
-      let playPause = UITapGestureRecognizer(target: self, action: #selector(resetCamera))
-      playPause.allowedPressTypes = [NSNumber(value: UIPress.PressType.playPause.rawValue)]
-      addGestureRecognizer(playPause)
+      addPressRecognizer(.select, #selector(handleSelect))
+      addPressRecognizer(.playPause, #selector(resetCamera))
+      addPressRecognizer(.menu, #selector(handleMenu))
+      for arrow in [UIPress.PressType.leftArrow, .rightArrow, .upArrow, .downArrow] {
+        addPressRecognizer(arrow, #selector(handleArrow(_:)))
+      }
 
       updateSubscription = scene.subscribe(to: SceneEvents.Update.self) { [weak self] event in
         self?.update(dt: min(max(event.deltaTime, 0), 0.1))
@@ -294,10 +284,10 @@
         pivot.children.removeAll()
         if let newScene = newScene {
           pivot.addChild(newScene.entity)
-          newScene.live?.headPoseProvider = { [weak self] in
+          newScene.live.headPoseProvider = { [weak self] in
             self.map { XRPose(matrix: $0.orbitCameraTransform) }
           }
-          newScene.features?.cameraTransformProvider = { [weak self] in self?.orbitCameraTransform }
+          newScene.features.cameraTransformProvider = { [weak self] in self?.orbitCameraTransform }
         }
       }
       if resetToken != lastResetToken {
@@ -309,8 +299,9 @@
     @objc private func resetCamera() {
       orbit = XROrbitCameraState()
       guard let loaded = loaded else { return }
+      let bounds = loaded.live.session.sceneBounds
       orbit.apply(loaded.cameraOptions)
-      orbit.setBounds(center: loaded.bounds.center, radius: loaded.bounds.radius)
+      orbit.setBounds(center: bounds.center, radius: bounds.radius)
     }
 
     private func update(dt: TimeInterval) {
@@ -325,8 +316,14 @@
 
     // MARK: Input
 
-    /// Orbits by the touch-surface swipe since the last update (`internal` for unit tests).
-    @objc func handlePan(_ recognizer: UIPanGestureRecognizer) {
+    private func addPressRecognizer(_ type: UIPress.PressType, _ action: Selector) {
+      let tap = UITapGestureRecognizer(target: self, action: action)
+      tap.allowedPressTypes = [NSNumber(value: type.rawValue)]
+      addGestureRecognizer(tap)
+    }
+
+    /// Orbits by the touch-surface swipe since the last update.
+    @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
       let translation = recognizer.translation(in: self)
       let now = ProcessInfo.processInfo.systemUptime
       switch recognizer.state {
@@ -344,55 +341,33 @@
       }
     }
 
+    /// One clickpad-ring or arrow press orbits one step in that direction.
+    @objc private func handleArrow(_ recognizer: UITapGestureRecognizer) {
+      let step = Self.orbitStepPoints
+      let (dx, dy): (Double, Double)
+      switch recognizer.allowedPressTypes.first.flatMap({ UIPress.PressType(rawValue: $0.intValue) }
+      ) {
+      case .leftArrow: (dx, dy) = (-step, 0)
+      case .rightArrow: (dx, dy) = (step, 0)
+      case .upArrow: (dx, dy) = (0, -step)
+      default: (dx, dy) = (0, step)
+      }
+      orbit.drag(dx: dx, dy: dy, now: ProcessInfo.processInfo.systemUptime)
+    }
+
     @objc private func handleSelect() {
       let center = CGPoint(x: bounds.midX, y: bounds.midY)
-      guard let live = loaded?.live, live.handleTap(at: center, in: self) else {
+      guard let hit = hitTest(center, query: .nearest, mask: .all).first,
+        loaded?.live.handleTap(on: hit.entity, hitPoint: hit.position) == true
+      else {
         onSelect?(nil)
         return
       }
-      let name = entity(at: center)?.name ?? ""
-      onSelect?(name.isEmpty ? "mesh" : name)
+      onSelect?(hit.entity.name.isEmpty ? "mesh" : hit.entity.name)
     }
 
-    /// Orbits one step for an arrow press, or leaves exploring on Menu. Returns `false` for
-    /// presses the view does not handle, which continue up the responder chain.
-    private func handle(_ press: UIPress) -> Bool {
-      guard isExploring else { return false }
-      let step = Self.orbitStepPoints
-      let now = ProcessInfo.processInfo.systemUptime
-      switch press.type {
-      case .leftArrow: orbit.drag(dx: -step, dy: 0, now: now)
-      case .rightArrow: orbit.drag(dx: step, dy: 0, now: now)
-      case .upArrow: orbit.drag(dx: 0, dy: -step, now: now)
-      case .downArrow: orbit.drag(dx: 0, dy: step, now: now)
-      case .menu: onExit?()
-      default: return false
-      }
-      return true
-    }
-
-    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-      let consumed = presses.filter(handle)
-      consumedPresses.formUnion(consumed)
-      let unhandled = presses.subtracting(consumed)
-      if !unhandled.isEmpty { super.pressesBegan(unhandled, with: event) }
-    }
-
-    override func pressesChanged(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-      let unhandled = presses.subtracting(consumedPresses)
-      if !unhandled.isEmpty { super.pressesChanged(unhandled, with: event) }
-    }
-
-    override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-      let unhandled = presses.subtracting(consumedPresses)
-      consumedPresses.subtract(presses)
-      if !unhandled.isEmpty { super.pressesEnded(unhandled, with: event) }
-    }
-
-    override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-      let unhandled = presses.subtracting(consumedPresses)
-      consumedPresses.subtract(presses)
-      if !unhandled.isEmpty { super.pressesCancelled(unhandled, with: event) }
+    @objc private func handleMenu() {
+      onExit?()
     }
   }
 #endif

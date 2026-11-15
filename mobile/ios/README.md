@@ -31,12 +31,11 @@ On tvOS, `RealityKitHelper`, `XRLiveRealityKitSession`,
 `XRSpatialRealityKitFeatures`, and `XRSimRealityKitBridge` require tvOS 26 (the
 first release with RealityKit) and Xcode 26 or later; the package itself keeps
 its tvOS 15 floor, so apps that only use `ThreeCompiler` are unaffected. Guard
-calls with `if #available(tvOS 26.0, *)`. The `ARView` conveniences
-`handleTap(at:in:)`, `pointerDown(at:in:)`, `pointerMove(at:in:)`, and
-`configureStudioEnvironment(of:)` work on tvOS too; `enablePostProcessing(on:)`
-and `XRLivePostProcessor` remain iOS-only. tvOS has no touch input, so
-hosts drive the camera and selection from the Siri Remote or a game controller,
-for example by hit-testing a center reticle; the Apple TV target in
+calls with `if #available(tvOS 26.0, *)`. Post-processing
+(`enablePostProcessing(on:)`, `XRLivePostProcessor`) remains iOS-only. tvOS has
+no touch input, so hosts drive the camera and selection from the Siri Remote or
+a game controller, for example by hit-testing a center reticle and passing the
+hit entity to `handleTap(on:hitPoint:)`; the Apple TV target in
 [`mobile/examples/ios_swiftui`](../examples/ios_swiftui) shows the pattern.
 `QuickLookHelper` requires UIKit and QuickLook, which tvOS does not provide.
 
@@ -149,7 +148,7 @@ func run(glb: Data) async throws -> XRLiveRealityKitSession? {
     return live
 }
 // iOS:      live.handleTap(at: point, in: arView)
-// tvOS:     live.handleTap(at: CGPoint(x: arView.bounds.midX, y: arView.bounds.midY), in: arView)
+// tvOS:     hit-test a center reticle, then live.handleTap(on: hit.entity, hitPoint: hit.position)
 // visionOS: SpatialTapGesture().targetedToAnyEntity().onEnded { live.handleTap(on: $0.entity) }
 ```
 

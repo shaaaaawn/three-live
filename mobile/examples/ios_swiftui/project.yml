@@ -37,10 +37,10 @@ packages:
     # exercises the same manifest that external consumers resolve.
     path: ../../..
 
-targets:
-  ThreeLiveDemo:
+# The iOS and tvOS apps compile the same folder; each Swift file is gated to its platform.
+targetTemplates:
+  DemoApp:
     type: application
-    platform: iOS
     sources:
       - path: .
         excludes:
@@ -49,12 +49,20 @@ targets:
           - Info.plist
           - InfoTV.plist
           - UITests
-          - UnitTests
           - .build
           - '*.xcodeproj'
     dependencies:
       - package: ThreeLiveCompiler
         product: ThreeLiveCompiler
+    settings:
+      base:
+        SWIFT_VERSION: '5.9'
+        ENABLE_USER_SCRIPT_SANDBOXING: 'NO'
+
+targets:
+  ThreeLiveDemo:
+    templates: [DemoApp]
+    platform: iOS
     info:
       path: Info.plist
       properties:
@@ -76,35 +84,18 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.google.threelive.demo
-        SWIFT_VERSION: '5.9'
         TARGETED_DEVICE_FAMILY: '1,2'
-        ENABLE_USER_SCRIPT_SANDBOXING: 'NO'
         CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]: 'NO'
         CODE_SIGNING_REQUIRED[sdk=iphonesimulator*]: 'NO'
         CODE_SIGN_IDENTITY[sdk=iphonesimulator*]: ''
 
   # Apple TV demo (TVContentView.swift): the same presets, explored with the Siri Remote.
   ThreeLiveDemoTV:
-    type: application
+    templates: [DemoApp]
     platform: tvOS
     scheme:
       testTargets:
-        - ThreeLiveDemoTVTests
         - ThreeLiveDemoTVUITests
-    sources:
-      - path: .
-        excludes:
-          - project.yml
-          - README.md
-          - Info.plist
-          - InfoTV.plist
-          - UITests
-          - UnitTests
-          - .build
-          - '*.xcodeproj'
-    dependencies:
-      - package: ThreeLiveCompiler
-        product: ThreeLiveCompiler
     info:
       path: InfoTV.plist
       properties:
@@ -115,27 +106,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.google.threelive.demo.tv
-        SWIFT_VERSION: '5.9'
         TARGETED_DEVICE_FAMILY: '3'
-        ENABLE_USER_SCRIPT_SANDBOXING: 'NO'
         CODE_SIGNING_ALLOWED[sdk=appletvsimulator*]: 'NO'
         CODE_SIGNING_REQUIRED[sdk=appletvsimulator*]: 'NO'
         CODE_SIGN_IDENTITY[sdk=appletvsimulator*]: ''
-
-  # Unit tests for the Apple TV demo's input handling, hosted in the app.
-  ThreeLiveDemoTVTests:
-    type: bundle.unit-test
-    platform: tvOS
-    sources:
-      - path: UnitTests
-    dependencies:
-      - target: ThreeLiveDemoTV
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.google.threelive.demo.tv.tests
-        SWIFT_VERSION: '5.9'
-        GENERATE_INFOPLIST_FILE: 'YES'
-        TARGETED_DEVICE_FAMILY: '3'
 
   # Drives the Apple TV demo with the simulated Siri Remote (XCUIRemote).
   ThreeLiveDemoTVUITests:

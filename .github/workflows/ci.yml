@@ -250,10 +250,12 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      # The Apple TV demo needs the tvOS 26 SDK (the first with RealityKit).
       - name: Build tvOS example app
         working-directory: mobile/examples/ios_swiftui
         run: |
-          if [ -d ../../ios/ThreeLiveCompiler.xcframework/tvos-arm64 ] && xcodebuild -showsdks | grep -q -- '-sdk appletvos'; then
+          tvos_sdk="$(xcrun --sdk appletvos --show-sdk-version 2>/dev/null || echo 0)"
+          if [ -d ../../ios/ThreeLiveCompiler.xcframework/tvos-arm64 ] && [ "${tvos_sdk%%.*}" -ge 26 ]; then
             xcodebuild -project ThreeLiveDemo.xcodeproj \
               -scheme ThreeLiveDemoTV \
               -destination 'generic/platform=tvOS' \
@@ -261,7 +263,7 @@ jobs:
               CODE_SIGNING_ALLOWED=NO \
               build
           else
-            echo "::warning::tvOS XCFramework slice or SDK unavailable on this runner; skipping tvOS example build"
+            echo "::warning::tvOS XCFramework slice or tvOS 26 SDK unavailable on this runner; skipping tvOS example build"
           fi
 
       - name: Check release checksum pin

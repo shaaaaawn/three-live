@@ -42,7 +42,7 @@ final class TVRemoteUITests: XCTestCase {
     remote.press(.select)
     waitForStatus("Nothing selectable under the reticle")
 
-    // Play/Pause resets the camera and stays in Explore.
+    // Play/Pause (camera reset) is handled in Explore rather than leaving it.
     remote.press(.playPause)
     XCTAssertTrue(hint.exists)
 
@@ -53,14 +53,14 @@ final class TVRemoteUITests: XCTestCase {
     XCTAssertEqual(app.state, .runningForeground)
   }
 
-  /// Loads Workbench (XR-Live) and selects the node under the reticle through
-  /// `XRLiveRealityKitSession.handleTap(at:in:)`. The reticle starts on the knot, but the
-  /// scene's dynamic orb can roll in front of it, so either node is a correct selection.
+  /// Loads Instanced Lattice and selects the knot at the center of its turntable, which has an
+  /// `onSelect` behavior. (The scene has no physics, so nothing else can move under the
+  /// reticle.)
   func testRemoteSelectsNodeUnderReticle() throws {
     let explore = try waitForExploreEnabled()
-    let workbench = app.buttons["preset-Workbench"]
-    XCTAssertTrue(workbench.exists)
-    move(.right, until: workbench)
+    let lattice = app.buttons["preset-Instanced Lattice"]
+    XCTAssertTrue(lattice.exists)
+    move(.right, until: lattice)
     remote.press(.select)
     waitForStatus("Compiled", prefixOnly: true)
 
@@ -68,7 +68,20 @@ final class TVRemoteUITests: XCTestCase {
     remote.press(.select)
     XCTAssertTrue(app.staticTexts["exploreHint"].waitForExistence(timeout: 5))
     remote.press(.select)
-    waitForStatus("Selected ", prefixOnly: true)
+    waitForStatus("Selected LatticeEnergyCore")
+  }
+
+  /// Outside Explore the demo does not handle Menu, so it leaves the app as tvOS expects.
+  func testMenuOnSceneListLeavesTheApp() throws {
+    _ = try waitForExploreEnabled()
+    remote.press(.menu)
+    let left = XCTWaiter.wait(
+      for: [
+        expectation(
+          for: NSPredicate(format: "state != %d", XCUIApplication.State.runningForeground.rawValue),
+          evaluatedWith: app)
+      ], timeout: 10)
+    XCTAssertEqual(left, .completed, "app was still in the foreground after Menu")
   }
 
   // MARK: Helpers
