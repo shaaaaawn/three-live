@@ -16,7 +16,7 @@
 // particles, driven by world-space pointer rays from the host (ARView touches on iOS,
 // DragGesture / spatial events on visionOS). Same math and event details as the web plugins.
 
-#if canImport(RealityKit) && !os(tvOS)
+#if canImport(RealityKit) && (!os(tvOS) || compiler(>=6.2))
   import Combine
   import CoreGraphics
   import Foundation
@@ -26,6 +26,7 @@
     import Metal
   #endif
 
+  @available(tvOS 26.0, *)
   @MainActor
   public final class XRSpatialRealityKitFeatures {
     /// `{mesh, scale, yawDeg}` when a handle drag ends (web `xr-handles-change`).
@@ -2410,10 +2411,19 @@
           space: colorSpace, bitmapInfo: bitmapInfo, provider: provider, decode: nil,
           shouldInterpolate: true, intent: .defaultIntent)
       else { return nil }
-      if #available(iOS 15.0, macOS 12.0, visionOS 1.0, *) {
-        return try? TextureResource.generate(from: cgImage, options: .init(semantic: .color))
-      }
-      return nil
+      return makeTexture(cgImage, semantic: .color)
+    }
+
+    /// Creates a texture from `cgImage` synchronously. `TextureResource.generate(from:options:)`
+    /// is unavailable on tvOS, where the synchronous `init(image:options:)` (tvOS 26) replaces it.
+    static func makeTexture(
+      _ cgImage: CGImage, semantic: TextureResource.Semantic
+    ) -> TextureResource? {
+      #if os(tvOS)
+        return try? TextureResource(image: cgImage, options: .init(semantic: semantic))
+      #else
+        return try? TextureResource.generate(from: cgImage, options: .init(semantic: semantic))
+      #endif
     }
 
     static func splatMesh(_ g: SplatParser.QuadGeometry) -> MeshResource? {
@@ -2480,7 +2490,7 @@
           shouldInterpolate: true, intent: .defaultIntent)
       else { return nil }
       guard #available(iOS 15.0, macOS 12.0, visionOS 1.0, *),
-        let tex = try? TextureResource.generate(from: cgImage, options: .init(semantic: .raw))
+        let tex = makeTexture(cgImage, semantic: .raw)
       else { return nil }
       var mat = UnlitMaterial(color: .black)
       mat.color = .init(tint: .black)

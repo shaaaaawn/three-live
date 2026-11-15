@@ -24,6 +24,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+-   **RealityKit on tvOS 26:** `RealityKitHelper`, `XRLiveRealityKitSession`,
+    `XRSpatialRealityKitFeatures`, and `XRSimRealityKitBridge` are now
+    available on tvOS 26 and later (Xcode 26+). The package keeps its tvOS 15
+    floor for `ThreeCompiler`. On tvOS, entities load through the `async`
+    `Entity(contentsOf:)` initializer, and splat and contact-shadow textures
+    use the synchronous `TextureResource(image:options:)` initializer in place
+    of the tvOS-unavailable `TextureResource.generate(from:options:)`.
+
 ### Changed
 
 -   **Self-contained Apple framework:** `ThreeLiveCompiler.xcframework` exports

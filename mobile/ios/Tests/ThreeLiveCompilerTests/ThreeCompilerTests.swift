@@ -15,7 +15,7 @@
  */
 
 import XCTest
-#if canImport(RealityKit) && !os(tvOS)
+#if canImport(RealityKit) && (!os(tvOS) || compiler(>=6.2))
   import RealityKit
 #endif
 
@@ -290,7 +290,7 @@ final class ThreeCompilerTests: XCTestCase {
     }
   }
 
-  #if canImport(RealityKit) && !os(tvOS)
+  #if canImport(RealityKit) && (!os(tvOS) || compiler(>=6.2))
     func testXRLiveEntityTraitsCodableRoundTrip() throws {
       let json = """
         {
@@ -320,7 +320,57 @@ final class ThreeCompilerTests: XCTestCase {
     }
 
     @MainActor
+    func testOutlineAddsFrontFaceCulledShellAndRemovesIt() throws {
+      guard #available(tvOS 26.0, *) else {
+        throw XCTSkip("RealityKit requires tvOS 26")
+      }
+      let model = ModelEntity(
+        mesh: .generateBox(size: 0.5), materials: [SimpleMaterial()])
+      RealityKitHelper.applyOutline(XRLiveOutline(color: "#ff0000"), to: model)
+
+      #if compiler(>=6.0)
+        if #available(iOS 18.0, macOS 15.0, visionOS 2.0, *) {
+          let shells = model.children.filter { $0.name == RealityKitHelper.outlineShellName }
+          XCTAssertEqual(shells.count, 1)
+          let shell = try XCTUnwrap(shells.first as? ModelEntity)
+          XCTAssertGreaterThan(shell.scale.x, 1)
+          let material = try XCTUnwrap(shell.model?.materials.first as? UnlitMaterial)
+          XCTAssertEqual(material.faceCulling, .front)
+        }
+      #endif
+
+      RealityKitHelper.removeOutline(from: model)
+      XCTAssertFalse(model.children.contains { $0.name == RealityKitHelper.outlineShellName })
+    }
+
+    @MainActor
+    func testMakeTextureCreatesColorAndRawTextures() throws {
+      guard #available(tvOS 26.0, *) else {
+        throw XCTSkip("RealityKit requires tvOS 26")
+      }
+      let size = 8
+      let rgba = [UInt8](repeating: 0x80, count: size * size * 4)
+      let provider = try XCTUnwrap(CGDataProvider(data: Data(rgba) as CFData))
+      let image = try XCTUnwrap(
+        CGImage(
+          width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32,
+          bytesPerRow: size * 4, space: CGColorSpaceCreateDeviceRGB(),
+          bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue),
+          provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent))
+
+      for semantic in [TextureResource.Semantic.color, .raw] {
+        let texture = try XCTUnwrap(
+          XRSpatialRealityKitFeatures.makeTexture(image, semantic: semantic))
+        XCTAssertEqual(texture.width, size)
+        XCTAssertEqual(texture.height, size)
+      }
+    }
+
+    @MainActor
     func testWorkbenchAndBallpitLoadInRealityKit() async throws {
+      guard #available(tvOS 26.0, *) else {
+        throw XCTSkip("RealityKit requires tvOS 26")
+      }
       let workbenchScript = """
         const base = new THREE.Mesh(
           new THREE.CylinderGeometry(0.9, 1.0, 0.08, 36),

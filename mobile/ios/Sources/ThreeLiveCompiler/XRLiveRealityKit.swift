@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#if canImport(RealityKit) && !os(tvOS)
+#if canImport(RealityKit) && (!os(tvOS) || compiler(>=6.2))
   import Foundation
   import RealityKit
 
@@ -163,7 +163,7 @@
     }
   }
 
-  @available(iOS 15.0, macOS 12.0, visionOS 1.0, *)
+  @available(iOS 15.0, macOS 12.0, visionOS 1.0, tvOS 26.0, *)
   extension RealityKitHelper {
 
     /// Extracts a map of node/entity name to `XRLiveEntityTraits` from a compiled `.glb` buffer's
@@ -239,7 +239,7 @@
 
     /// Renders an `outline` trait as an inverted hull: an unlit, front-face-culled copy of each
     /// model under `entity`, pushed outward by the trait thickness (pixels, converted at a 1.5 m
-    /// viewing distance) so only its silhouette rim shows. Works on iOS and visionOS.
+    /// viewing distance) so only its silhouette rim shows. Works on iOS, visionOS, and tvOS.
     @MainActor
     public static func applyOutline(_ outline: XRLiveOutline, to entity: Entity) {
       removeOutline(from: entity)
@@ -249,19 +249,24 @@
           red: CGFloat(rgb.x), green: CGFloat(rgb.y), blue: CGFloat(rgb.z), alpha: 1))
       // Front-face culling (iOS 18 / visionOS 2 SDK) is what turns the shell into a rim; without
       // it the shell would hide the model, so older systems fall back to a hover highlight.
-      var culled = false
-      #if compiler(>=6.0)
-        if #available(iOS 18.0, macOS 15.0, visionOS 2.0, *) {
-          material.faceCulling = .front
-          culled = true
+      #if os(tvOS)
+        // Every tvOS release with RealityKit (tvOS 26+) supports front-face culling.
+        material.faceCulling = .front
+      #else
+        var culled = false
+        #if compiler(>=6.0)
+          if #available(iOS 18.0, macOS 15.0, visionOS 2.0, *) {
+            material.faceCulling = .front
+            culled = true
+          }
+        #endif
+        guard culled else {
+          #if os(visionOS)
+            entity.components.set(HoverEffectComponent())
+          #endif
+          return
         }
       #endif
-      guard culled else {
-        #if os(visionOS)
-          entity.components.set(HoverEffectComponent())
-        #endif
-        return
-      }
       let offset = XRLivePostProcessing.outlineShellOffset(thicknessPixels: outline.thickness)
       var targets: [(Entity, MeshResource)] = []
       func collect(_ e: Entity) {

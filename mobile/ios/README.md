@@ -25,11 +25,17 @@ Platform | Minimum | `ThreeCompiler` | `RealityKitHelper` | `QuickLookHelper`
 iOS      | 15.0    | ✅               | ✅                  | ✅
 visionOS | 1.0     | ✅               | ✅                  | ✅
 macOS    | 12.0    | ✅               | ✅                  | —
-tvOS     | 15.0    | ✅               | —                  | —
+tvOS     | 15.0    | ✅               | ✅ (tvOS 26+)       | —
 
-`RealityKitHelper` is excluded on tvOS because RealityKit's `Entity` loading
-APIs are not available there below tvOS 26, and `QuickLookHelper` requires UIKit
-and QuickLook.
+On tvOS, `RealityKitHelper`, `XRLiveRealityKitSession`,
+`XRSpatialRealityKitFeatures`, and `XRSimRealityKitBridge` require tvOS 26 (the
+first release with RealityKit) and Xcode 26 or later; the package itself keeps
+its tvOS 15 floor, so apps that only use `ThreeCompiler` are unaffected. Guard
+calls with `if #available(tvOS 26.0, *)`. tvOS has no touch input, so hosts drive
+selection and camera from the Siri Remote or a game controller through the
+platform-neutral entry points (`handleTap(on:)`, `handleHover(on:hovered:)`,
+`pointerDown(origin:direction:)`, and `headPoseProvider`). `QuickLookHelper`
+requires UIKit and QuickLook, which tvOS does not provide.
 
 ## Installation
 
