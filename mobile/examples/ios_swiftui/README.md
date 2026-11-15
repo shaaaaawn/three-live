@@ -114,7 +114,9 @@ Selection hit-tests the center of the view with
 as they do on iOS.
 
 The `ThreeLiveDemoTVUITests` target drives the app with the simulated Siri
-Remote (`XCUIRemote`):
+Remote (`XCUIRemote`). `XCUIRemote` cannot swipe, so `ThreeLiveDemoTVTests`
+covers touch-surface orbiting by feeding the view's pan handler a stubbed
+recognizer. The `ThreeLiveDemoTV` scheme runs both:
 
 ```bash
 xcodebuild test -project ThreeLiveDemo.xcodeproj -scheme ThreeLiveDemoTV \

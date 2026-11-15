@@ -245,7 +245,7 @@
 
     private let camera = PerspectiveCamera()
     private let pivot = Entity()
-    private var orbit = XROrbitCameraState()
+    private(set) var orbit = XROrbitCameraState()
     private var loaded: TVLoadedScene?
     private var lastResetToken = -1
     private var isPanning = false
@@ -325,7 +325,8 @@
 
     // MARK: Input
 
-    @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+    /// Orbits by the touch-surface swipe since the last update (`internal` for unit tests).
+    @objc func handlePan(_ recognizer: UIPanGestureRecognizer) {
       let translation = recognizer.translation(in: self)
       let now = ProcessInfo.processInfo.systemUptime
       switch recognizer.state {

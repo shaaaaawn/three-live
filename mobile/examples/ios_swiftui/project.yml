@@ -49,6 +49,7 @@ targets:
           - Info.plist
           - InfoTV.plist
           - UITests
+          - UnitTests
           - .build
           - '*.xcodeproj'
     dependencies:
@@ -88,6 +89,7 @@ targets:
     platform: tvOS
     scheme:
       testTargets:
+        - ThreeLiveDemoTVTests
         - ThreeLiveDemoTVUITests
     sources:
       - path: .
@@ -97,6 +99,7 @@ targets:
           - Info.plist
           - InfoTV.plist
           - UITests
+          - UnitTests
           - .build
           - '*.xcodeproj'
     dependencies:
@@ -118,6 +121,21 @@ targets:
         CODE_SIGNING_ALLOWED[sdk=appletvsimulator*]: 'NO'
         CODE_SIGNING_REQUIRED[sdk=appletvsimulator*]: 'NO'
         CODE_SIGN_IDENTITY[sdk=appletvsimulator*]: ''
+
+  # Unit tests for the Apple TV demo's input handling, hosted in the app.
+  ThreeLiveDemoTVTests:
+    type: bundle.unit-test
+    platform: tvOS
+    sources:
+      - path: UnitTests
+    dependencies:
+      - target: ThreeLiveDemoTV
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.google.threelive.demo.tv.tests
+        SWIFT_VERSION: '5.9'
+        GENERATE_INFOPLIST_FILE: 'YES'
+        TARGETED_DEVICE_FAMILY: '3'
 
   # Drives the Apple TV demo with the simulated Siri Remote (XCUIRemote).
   ThreeLiveDemoTVUITests:
