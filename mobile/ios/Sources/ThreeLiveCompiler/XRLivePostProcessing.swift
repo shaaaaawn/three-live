@@ -19,12 +19,12 @@ import Foundation
 #if canImport(CoreImage)
   import CoreImage
 #endif
-#if canImport(RealityKit) && (os(iOS) || (os(tvOS) && compiler(>=6.2)))
+#if canImport(RealityKit) && os(iOS)
   import RealityKit
 #endif
 
-/// Platform-independent pieces of the iOS and tvOS post-processing pipeline (`tone-mapping`,
-/// `bloom`, `outline`), kept pure so they are unit-tested on every platform.
+/// Platform-independent pieces of the iOS post-processing pipeline (`tone-mapping`, `bloom`,
+/// `outline`), kept pure so they are unit-tested on every platform.
 ///
 /// RealityKit tone-maps internally, so the selected curve is applied as a 3D LUT on RealityKit's
 /// display-referred output: each pixel is decoded to linear, mapped back to an approximate scene
@@ -151,12 +151,12 @@ public enum XRLivePostProcessing {
   }
 }
 
-#if canImport(RealityKit) && canImport(CoreImage) && (os(iOS) || (os(tvOS) && compiler(>=6.2)))
-  /// Full-screen `tone-mapping` + `bloom` for an iOS or tvOS `ARView`, via
+#if canImport(RealityKit) && canImport(CoreImage) && os(iOS)
+  /// Full-screen `tone-mapping` + `bloom` for an iOS `ARView`, via
   /// `ARView.renderCallbacks.postProcess` and Core Image (tone-map LUT, thresholded Gaussian
   /// bloom composited additively). visionOS has no app-level post-process hook, so there only
   /// `outline` (inverted hull) is rendered.
-  @available(iOS 15.0, tvOS 26.0, *)
+  @available(iOS 15.0, *)
   public final class XRLivePostProcessor: @unchecked Sendable {
     private let lock = NSLock()
     private var ciContext: CIContext?

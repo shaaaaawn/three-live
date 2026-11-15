@@ -33,10 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     `Entity(contentsOf:)` initializer, and splat and contact-shadow textures
     use the synchronous `TextureResource(image:options:)` initializer in place
     of the tvOS-unavailable `TextureResource.generate(from:options:)`. The
-    `ARView` conveniences (`handleTap(at:in:)`, `pointerDown(at:in:)`,
-    `pointerMove(at:in:)`, `enablePostProcessing(on:)`,
-    `configureStudioEnvironment(of:)`), `XRLivePostProcessor`, and
-    `InputTargetComponent` installation also cover tvOS.
+    `ARView` conveniences `handleTap(at:in:)`, `pointerDown(at:in:)`,
+    `pointerMove(at:in:)`, and `configureStudioEnvironment(of:)`, and
+    `InputTargetComponent` installation, also cover tvOS.
 -   **Apple TV demo:** `mobile/examples/ios_swiftui` gains a `ThreeLiveDemoTV`
     target (tvOS 26+) that explores the preset scenes with the Siri Remote
     (swipe to orbit, select under a center reticle, Play/Pause to reset, Menu

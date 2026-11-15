@@ -370,11 +370,11 @@
       #endif
     }
 
-    #if os(iOS) || os(tvOS)
+    #if os(iOS)
       /// Installs full-screen `tone-mapping` and `bloom` post-processing on `arView`, using the
       /// strongest `bloom` trait in the scene (or `bloom` when given). Returns the processor so
       /// hosts can change `toneMapping`, `exposure` or `bloom` at runtime.
-      @available(iOS 15.0, tvOS 26.0, *)
+      @available(iOS 15.0, *)
       @MainActor
       @discardableResult
       public func enablePostProcessing(

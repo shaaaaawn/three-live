@@ -373,6 +373,44 @@ final class ThreeCompilerTests: XCTestCase {
         guard #available(tvOS 26.0, *) else {
           throw XCTSkip("RealityKit requires tvOS 26")
         }
+        let (live, arView) = try await makeSelectableBoxView()
+        let bounds = arView.bounds
+        XCTAssertTrue(live.handleTap(at: CGPoint(x: bounds.midX, y: bounds.midY), in: arView))
+        XCTAssertFalse(live.handleTap(at: CGPoint(x: 2, y: 2), in: arView))
+      }
+
+      #if os(iOS) || os(tvOS)
+        /// `pointerDown` / `pointerMove(at:in:)` build world rays from view points: a stroke
+        /// starts over empty space, but not over a scene node.
+        @MainActor
+        func testPointerAtViewPointPaintsStrokeOffNodesOnly() async throws {
+          guard #available(tvOS 26.0, *) else {
+            throw XCTSkip("RealityKit requires tvOS 26")
+          }
+          let (live, arView) = try await makeSelectableBoxView()
+          let features = XRSpatialRealityKitFeatures(live: live)
+          features.paintColor = SIMD4<Float>(1, 0, 0, 1)
+          var painted: (points: Int, length: Float)?
+          features.onPaintStroke = { _, points, length in painted = (points, length) }
+
+          let center = CGPoint(x: arView.bounds.midX, y: arView.bounds.midY)
+          XCTAssertFalse(features.pointerDown(at: center, in: arView))
+
+          XCTAssertTrue(features.pointerDown(at: CGPoint(x: 20, y: 20), in: arView))
+          for x in stride(from: 40, through: 160, by: 20) {
+            features.pointerMove(at: CGPoint(x: x, y: 20), in: arView)
+          }
+          features.pointerUp()
+          let stroke = try XCTUnwrap(painted)
+          XCTAssertGreaterThan(stroke.points, 1)
+          XCTAssertGreaterThan(stroke.length, 0)
+        }
+      #endif
+
+      /// A 1 m selectable box at the origin, seen by a 400×400 `ARView` from 4 m away.
+      @available(tvOS 26.0, *)
+      @MainActor
+      private func makeSelectableBoxView() async throws -> (XRLiveRealityKitSession, ARView) {
         let script = """
           const box = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
@@ -402,9 +440,7 @@ final class ThreeCompilerTests: XCTestCase {
         let cameraAnchor = AnchorEntity(world: .zero)
         cameraAnchor.addChild(camera)
         arView.scene.addAnchor(cameraAnchor)
-
-        XCTAssertTrue(live.handleTap(at: CGPoint(x: frame.midX, y: frame.midY), in: arView))
-        XCTAssertFalse(live.handleTap(at: CGPoint(x: 2, y: 2), in: arView))
+        return (live, arView)
       }
     #endif
 
