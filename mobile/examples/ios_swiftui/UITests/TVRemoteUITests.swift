@@ -94,6 +94,8 @@ final class TVRemoteUITests: XCTestCase {
       prefixOnly
       ? NSPredicate(format: "label BEGINSWITH %@", text)
       : NSPredicate(format: "label == %@", text)
-    wait(for: [expectation(for: predicate, evaluatedWith: status)], timeout: 30)
+    let found = XCTWaiter.wait(
+      for: [expectation(for: predicate, evaluatedWith: status)], timeout: 30)
+    XCTAssertEqual(found, .completed, "status was \"\(status.label)\", expected \"\(text)\"")
   }
 }
