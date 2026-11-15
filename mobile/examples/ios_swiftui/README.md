@@ -113,6 +113,11 @@ Select hit-tests the center of the view and passes the hit to
 `XRLiveRealityKitSession.handleTap(on:hitPoint:)`, so `onSelect` behaviors run
 exactly as they do on iOS.
 
+The layered app icon and Top Shelf images in `TVAssets.xcassets` are rendered by
+[`scripts/make_tv_brand_assets.py`](../../../scripts/make_tv_brand_assets.py)
+(Pillow). The tvOS build number comes from `CURRENT_PROJECT_VERSION`, so pass a
+new one each time you archive for TestFlight.
+
 The `ThreeLiveDemoTVUITests` target drives the app with the simulated Siri
 Remote (`XCUIRemote`). `XCUIRemote` cannot swipe, so touch-surface orbiting needs
 a real Apple TV to check:

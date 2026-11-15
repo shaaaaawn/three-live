@@ -49,6 +49,7 @@ targetTemplates:
           - Info.plist
           - InfoTV.plist
           - UITests
+          - TVAssets.xcassets
           - .build
           - '*.xcodeproj'
     dependencies:
@@ -93,6 +94,9 @@ targets:
   ThreeLiveDemoTV:
     templates: [DemoApp]
     platform: tvOS
+    # The shared sources exclude the tvOS-only asset catalog.
+    sources:
+      - path: TVAssets.xcassets
     scheme:
       testTargets:
         - ThreeLiveDemoTVUITests
@@ -100,12 +104,21 @@ targets:
       path: InfoTV.plist
       properties:
         CFBundleDisplayName: Three-Live
-        CFBundleShortVersionString: '1.0'
-        CFBundleVersion: '1'
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        # Pass CURRENT_PROJECT_VERSION=<unique number> when archiving for TestFlight.
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
+        # The demo uses no encryption beyond what tvOS provides, so TestFlight builds do not
+        # wait on an export-compliance answer.
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.google.threelive.demo.tv
+        MARKETING_VERSION: '1.0'
+        CURRENT_PROJECT_VERSION: '1'
+        # Layered app icon and Top Shelf images (TVAssets.xcassets, rendered by
+        # scripts/make_tv_brand_assets.py).
+        ASSETCATALOG_COMPILER_APPICON_NAME: App Icon & Top Shelf Image
         TARGETED_DEVICE_FAMILY: '3'
         CODE_SIGNING_ALLOWED[sdk=appletvsimulator*]: 'NO'
         CODE_SIGNING_REQUIRED[sdk=appletvsimulator*]: 'NO'
