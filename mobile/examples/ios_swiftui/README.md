@@ -85,7 +85,9 @@ xcodegen generate
 open ThreeLiveDemo.xcodeproj
 ```
 
-Select an iOS Simulator or a physical device and press **Run** (`Cmd+R`).
+Select an iOS Simulator or a physical device and press **Run** (`Cmd+R`). For
+Apple TV, choose the `ThreeLiveDemoTV` scheme and an Apple TV simulator or
+device instead.
 
 > **Note on AR mode.** "View in AR" uses Apple AR Quick Look, which needs the
 > device camera and therefore an `NSCameraUsageDescription` purpose string. That
@@ -93,8 +95,34 @@ Select an iOS Simulator or a physical device and press **Run** (`Cmd+R`).
 > placement requires a physical device; the simulator can display the model but
 > cannot place it in the world.
 
+## Apple TV
+
+The `ThreeLiveDemoTV` target (tvOS 26+, [`TVContentView.swift`](TVContentView.swift))
+compiles the same preset scenes on device and renders them with RealityKit. Pick
+a scene from the row along the bottom, then choose **Explore**:
+
+Siri Remote                          | Action
+------------------------------------ | -------------------------------------------
+Swipe on the touch surface           | Orbit the camera
+Click the clickpad ring / arrow keys | Step the camera 15°
+Click (Select)                       | Select the node under the center reticle
+Play/Pause                           | Reset the camera
+Menu                                 | Return to the scene list
+
+Selection hit-tests the center of the view with
+`XRLiveRealityKitSession.handleTap(at:in:)`, so `onSelect` behaviors run exactly
+as they do on iOS.
+
+The `ThreeLiveDemoTVUITests` target drives the app with the simulated Siri
+Remote (`XCUIRemote`):
+
+```bash
+xcodebuild test -project ThreeLiveDemo.xcodeproj -scheme ThreeLiveDemoTV \
+  -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)'
+```
+
 ## Platform Support
 
-This demo targets iOS and iPadOS. The `ThreeLiveCompiler` package itself
-additionally supports visionOS, tvOS, and macOS — see
+This demo targets iOS, iPadOS, and tvOS. The `ThreeLiveCompiler` package itself
+additionally supports visionOS and macOS — see
 [`mobile/ios/README.md`](../../ios/README.md) for the full matrix.

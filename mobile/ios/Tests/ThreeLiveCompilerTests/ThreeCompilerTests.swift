@@ -366,6 +366,48 @@ final class ThreeCompilerTests: XCTestCase {
       }
     }
 
+    #if os(iOS) || os(macOS) || os(tvOS)
+      /// Hosts with no touch (tvOS) select through a view point, such as a center reticle.
+      @MainActor
+      func testHandleTapAtViewPointSelectsOnlyTheHitNode() async throws {
+        guard #available(tvOS 26.0, *) else {
+          throw XCTSkip("RealityKit requires tvOS 26")
+        }
+        let script = """
+          const box = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+          box.name = 'TapTarget';
+          box.userData.interactivity = {
+            onSelect: { action: 'toggleTransform', scale: [1.3, 1.3, 1.3], duration: 0.3 }
+          };
+          scene.add(box);
+          """
+        let glb = try await ThreeCompiler.compileGLB(script)
+        let entity = try await RealityKitHelper.loadEntity(fromGLB: glb)
+        let live = try XCTUnwrap(XRLiveRealityKitSession(glbData: glb, root: entity))
+        live.installInputTargets()
+
+        let frame = CGRect(x: 0, y: 0, width: 400, height: 400)
+        #if os(iOS)
+          let arView = ARView(
+            frame: frame, cameraMode: .nonAR, automaticallyConfigureSession: false)
+        #else
+          let arView = ARView(frame: frame)
+        #endif
+        let modelAnchor = AnchorEntity(world: .zero)
+        modelAnchor.addChild(entity)
+        arView.scene.addAnchor(modelAnchor)
+        let camera = PerspectiveCamera()
+        camera.look(at: .zero, from: [0, 0, 4], relativeTo: nil)
+        let cameraAnchor = AnchorEntity(world: .zero)
+        cameraAnchor.addChild(camera)
+        arView.scene.addAnchor(cameraAnchor)
+
+        XCTAssertTrue(live.handleTap(at: CGPoint(x: frame.midX, y: frame.midY), in: arView))
+        XCTAssertFalse(live.handleTap(at: CGPoint(x: 2, y: 2), in: arView))
+      }
+    #endif
+
     @MainActor
     func testWorkbenchAndBallpitLoadInRealityKit() async throws {
       guard #available(tvOS 26.0, *) else {

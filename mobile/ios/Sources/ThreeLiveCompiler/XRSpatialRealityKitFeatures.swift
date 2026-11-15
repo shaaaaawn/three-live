@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // Native spatial features on RealityKit: manipulation handles, spatial paint and depth
-// particles, driven by world-space pointer rays from the host (ARView touches on iOS,
-// DragGesture / spatial events on visionOS). Same math and event details as the web plugins.
+// particles, driven by world-space pointer rays from the host (ARView touches on iOS, ARView
+// points from Siri Remote input on tvOS, DragGesture / spatial events on visionOS). Same math and event details as the web plugins.
 
 #if canImport(RealityKit) && (!os(tvOS) || compiler(>=6.2))
   import Combine
@@ -675,7 +675,7 @@
       onPaintStroke?(s.index, s.builder.points.count, s.builder.lengthMeters)
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
       /// Convenience for ARView: builds the world ray for a view point and forwards it.
       @discardableResult
       public func pointerDown(at point: CGPoint, in arView: ARView) -> Bool {

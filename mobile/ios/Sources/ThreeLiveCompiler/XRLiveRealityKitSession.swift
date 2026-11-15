@@ -299,8 +299,9 @@
         }
         #if os(visionOS)
           entity.components.set(InputTargetComponent(allowedInputTypes: .all))
-        #elseif os(iOS) && compiler(>=6.0)
-          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler).
+        #elseif (os(iOS) || os(tvOS)) && compiler(>=6.0)
+          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler) and in
+          // every tvOS release with RealityKit.
           if #available(iOS 18.0, *) {
             entity.components.set(InputTargetComponent(allowedInputTypes: .all))
           }
@@ -369,11 +370,11 @@
       #endif
     }
 
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
       /// Installs full-screen `tone-mapping` and `bloom` post-processing on `arView`, using the
       /// strongest `bloom` trait in the scene (or `bloom` when given). Returns the processor so
       /// hosts can change `toneMapping`, `exposure` or `bloom` at runtime.
-      @available(iOS 15.0, *)
+      @available(iOS 15.0, tvOS 26.0, *)
       @MainActor
       @discardableResult
       public func enablePostProcessing(
@@ -389,7 +390,7 @@
       }
     #endif
 
-    #if os(iOS) || os(macOS)
+    #if os(iOS) || os(macOS) || os(tvOS)
       /// Configures `arView`'s studio environment IBL intensity so PBR materials match Web and
       /// Android without clipping top faces to white.
       public static func configureStudioEnvironment(of arView: ARView) {
@@ -460,7 +461,7 @@
       return true
     }
 
-    #if os(iOS) || os(macOS)
+    #if os(iOS) || os(macOS) || os(tvOS)
       /// Hit-tests `point` in `arView` and dispatches a select on the nearest hit entity.
       @discardableResult
       public func handleTap(at point: CGPoint, in arView: ARView) -> Bool {

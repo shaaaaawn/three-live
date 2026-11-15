@@ -318,8 +318,9 @@
       if interactive {
         #if os(visionOS)
           entity.components.set(InputTargetComponent(allowedInputTypes: .all))
-        #elseif os(iOS) && compiler(>=6.0)
-          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler).
+        #elseif (os(iOS) || os(tvOS)) && compiler(>=6.0)
+          // `InputTargetComponent` ships in the iOS 18 SDK (Xcode 16 / Swift 6 compiler) and in
+          // every tvOS release with RealityKit.
           if #available(iOS 18.0, *) {
             entity.components.set(InputTargetComponent(allowedInputTypes: .all))
           }
