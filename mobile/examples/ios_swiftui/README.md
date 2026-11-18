@@ -63,7 +63,7 @@ macOS with Xcode 15 or newer is required.
 From the repository root:
 
 ```bash
-npm ci && npm run build          # generates the embedded JS engine asset
+npm install && npm run build     # generates the embedded JS engine asset
 bash scripts/build_ios_xcframework.sh
 ```
 
